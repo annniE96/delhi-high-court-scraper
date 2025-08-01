@@ -27,17 +27,20 @@ A Flask web application that scrapes and displays case information from the Delh
    git clone https://github.com/[YOUR_USERNAME]/delhi-high-court-scraper.git
    cd delhi-high-court-scraper
 
-**2.**Install dependencies:
-pip install -r requirements.txt
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
 
-**3.**Set up environment variables (create .env file):
-FLASK_SECRET_KEY=your_secret_key_here
-FLASK_ENV=development
+3. Set up environment variables (create .env file):
+   ```env
+    FLASK_SECRET_KEY=your_secret_key_here
+    FLASK_ENV=development
 
-**4.**Run the application:
-python app.py
+4. Run the application:
+   ```bash
+   python app.py
 
-**5.**Access at: http://localhost:5000
+5. Access at: http://localhost:5000
 
 CAPTCHA Handling Strategy 🛡️
 The system implements multiple approaches to handle CAPTCHAs:
