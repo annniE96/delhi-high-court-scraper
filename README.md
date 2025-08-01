@@ -42,7 +42,8 @@ A Flask web application that scrapes and displays case information from the Delh
 
 5. Access at: http://localhost:5000
 
-🛡️ CAPTCHA Handling Strategy
+
+### 🛡️ CAPTCHA Handling Strategy
 Primary Method
 
 ✔️ Randomized user agents
