@@ -42,21 +42,17 @@ A Flask web application that scrapes and displays case information from the Delh
 
 5. Access at: http://localhost:5000
 
-🛡️ CAPTCHA Handling Strategy
-The system implements multiple approaches to handle CAPTCHAs:
+CAPTCHA Handling Strategy
+Primary Method
+✅ Randomized user agents
 
-1. Primary Method (Requests-based):
+✅ Request throttling (2s delay between requests)
 
-Randomized user agents
+✅ Session persistence
 
-Request throttling (2s delay between requests)
+Fallback Method
+✅ Headless Chrome browser
 
-Session persistence
+✅ Human-like interaction delays
 
-2. Fallback Method (Selenium-based):
-
-Headless Chrome browser
-
-Human-like interaction delays
-
-Automatic retries (up to 3 attempts
+✅ Automatic retries (3 attempts maximum)
