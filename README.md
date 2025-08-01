@@ -43,8 +43,8 @@ A Flask web application that scrapes and displays case information from the Delh
 5. Access at: http://localhost:5000
 
 
-### 🛡️ CAPTCHA Handling Strategy
-Primary Method
+## 🛡️ CAPTCHA Handling Strategy
+### Primary Method
 
 ✔️ Randomized user agents
 
@@ -52,7 +52,7 @@ Primary Method
 
 ✔️ Session persistence
 
-Fallback Method
+### Fallback Method
 
 ✔️ Headless Chrome browser
 
