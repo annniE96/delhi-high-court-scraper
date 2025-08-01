@@ -1,0 +1,15 @@
+# Flask Web Framework
+Flask==2.3.3
+Werkzeug==2.3.7
+
+# Web Scraping Libraries
+requests==2.31.0
+beautifulsoup4==4.12.2
+lxml==4.9.3
+
+# Browser Automation
+selenium==4.15.2
+webdriver-manager==4.0.1
+
+# Database
+# sqlite3 is built into Python, no need to install
