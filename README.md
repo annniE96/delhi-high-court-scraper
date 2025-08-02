@@ -54,15 +54,15 @@ Chrome browser (for Selenium automation)
 
 ## 🔧 Environment Variables
 Create a .env file in the root directory (optional):
-# Flask Configuration
+### Flask Configuration
 FLASK_ENV=development
 FLASK_DEBUG=True
 SECRET_KEY=your-secret-key-here
 
-# Database Configuration
+### Database Configuration
 DATABASE_PATH=data/court_data.db
 
-# Scraping Configuration
+### Scraping Configuration
 SCRAPING_DELAY=2
 MAX_RETRIES=3
 TIMEOUT=30
