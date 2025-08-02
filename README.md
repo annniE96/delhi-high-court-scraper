@@ -52,22 +52,8 @@ Chrome browser (for Selenium automation)
 
 6. Open your browser: Navigate to http://localhost:5000
 
-## 📁 Project Structure
-court-data-fetcher/
-├── app.py                 # Main Flask application
-├── scraper.py            # Web scraping logic
-├── database.py           # Database operations
-├── requirements.txt      # Python dependencies
-├── README.md            # This file
-├── templates/
-│   ├── index.html       # Search form page
-│   └── results.html     # Results display page
-├── static/
-│   └── style.css        # Custom CSS styles
-└── data/
-    └── court_data.db    # SQLite database (auto-created)
-
 ## 🔧 Environment Variables
+Create a .env file in the root directory (optional):
 # Flask Configuration
 FLASK_ENV=development
 FLASK_DEBUG=True
