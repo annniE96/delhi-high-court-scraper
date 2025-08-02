@@ -103,36 +103,36 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-# Install system dependencies
+### Install system dependencies
 RUN apt-get update && apt-get install -y \
     chromium-driver \
     chromium \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
+### Copy requirements and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+### Copy application code
 COPY . .
 
-# Create data directory
+### Create data directory
 RUN mkdir -p data
 
-# Expose port
+### Expose port
 EXPOSE 5000
 
-# Run application
+### Run application
 CMD ["python", "app.py"]
 
 ## Build and Run
-# Build image
+### Build image
 docker build -t court-data-fetcher .
 
-# Run container
+### Run container
 docker run -p 5000:5000 court-data-fetcher
 
-### 🔒 Security Considerations
+## 🔒 Security Considerations
 
 No Hardcoded Secrets: All sensitive data via environment variables
 Input Validation: Form inputs are validated and sanitized
