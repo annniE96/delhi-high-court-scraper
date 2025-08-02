@@ -1,8 +1,8 @@
-Delhi High Court Case Data Fetcher
+## Delhi High Court Case Data Fetcher
 A web application that fetches case information from Delhi High Court's website and provides a user-friendly interface to search and view case details.
-🏛️ Court Chosen
+## 🏛️ Court Chosen
 Delhi High Court (https://delhihighcourt.nic.in/)
-✨ Features
+## ✨ Features
 
 Simple Web Interface: Clean, responsive form for case search
 Case Information Display: Shows petitioner, respondent, dates, and case status
