@@ -11,7 +11,7 @@ Database Logging: All queries and responses are logged in SQLite
 Error Handling: User-friendly error messages for invalid cases
 Responsive Design: Works on desktop and mobile devices
 
-🚀 Quick Start
+## 🚀 Quick Start
 Prerequisites
 
 Python 3.8 or higher
