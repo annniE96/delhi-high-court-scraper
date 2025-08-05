@@ -6,7 +6,7 @@
     <title>Delhi High Court - Case Status Search</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='styles.css') }}" rel="stylesheet">
 </head>
 <body>
     <div class="container-fluid">
@@ -28,8 +28,8 @@
             {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
-                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
-                            <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }} me-2"></i>
+                        <div class="alert alert-{{ 'danger' if category == 'danger' else 'warning' }} alert-dismissible fade show" role="alert">
+                            <i class="fas fa-{{ 'exclamation-triangle' if category == 'danger' else 'info-circle' }} me-2"></i>
                             {{ message }}
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
@@ -57,16 +57,9 @@
                                         </label>
                                         <select class="form-select" id="case_type" name="case_type" required>
                                             <option value="">Select Case Type</option>
-                                            <option value="CRL">Criminal Appeal</option>
-                                            <option value="CRA">Criminal Revision</option>
-                                            <option value="BAIL">Bail Application</option>
-                                            <option value="W.P.(C)">Writ Petition (Civil)</option>
-                                            <option value="W.P.(CRL)">Writ Petition (Criminal)</option>
-                                            <option value="FAO">First Appeal from Order</option>
-                                            <option value="CS(OS)">Civil Suit (Original Side)</option>
-                                            <option value="MAC APP">Motor Accident Claims Appeal</option>
-                                            <option value="CRP">Civil Revision Petition</option>
-                                            <option value="MAT.APP">Matrimonial Appeal</option>
+                                            {% for case_type_val in case_types %}
+                                            <option value="{{ case_type_val }}">{{ case_type_val }}</option>
+                                            {% endfor %}
                                         </select>
                                     </div>
                                     
@@ -76,9 +69,9 @@
                                             Case Number *
                                         </label>
                                         <input type="text" class="form-control" id="case_number" name="case_number" 
-                                               placeholder="e.g., 12345" required pattern="[0-9]+" 
+                                               placeholder="e.g., 15234" required pattern="[0-9]+" 
                                                title="Please enter only numbers">
-                                        <div class="form-text">Enter numbers only (e.g., 12345)</div>
+                                        <div class="form-text">Enter numbers only (e.g., 15234)</div>
                                     </div>
                                     
                                     <div class="col-md-4 mb-3">
@@ -88,17 +81,9 @@
                                         </label>
                                         <select class="form-select" id="filing_year" name="filing_year" required>
                                             <option value="">Select Year</option>
-                                            <option value="2025">2025</option>
-                                            <option value="2024">2024</option>
-                                            <option value="2023">2023</option>
-                                            <option value="2022">2022</option>
-                                            <option value="2021">2021</option>
-                                            <option value="2020">2020</option>
-                                            <option value="2019">2019</option>
-                                            <option value="2018">2018</option>
-                                            <option value="2017">2017</option>
-                                            <option value="2016">2016</option>
-                                            <option value="2015">2015</option>
+                                            {% for year in range(2025, 2014, -1) %}
+                                            <option value="{{ year }}">{{ year }}</option>
+                                            {% endfor %}
                                         </select>
                                     </div>
                                 </div>
@@ -117,45 +102,6 @@
                 </div>
             </div>
 
-            <!-- Help Section -->
-            <div class="row mt-5">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="card-title mb-0">
-                                <i class="fas fa-info-circle me-2"></i>
-                                How to Use
-                            </h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <div class="text-center mb-3">
-                                        <i class="fas fa-folder-open fa-3x text-primary mb-2"></i>
-                                        <h6>1. Select Case Type</h6>
-                                        <p class="text-muted small">Choose the appropriate case type from the dropdown menu</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="text-center mb-3">
-                                        <i class="fas fa-keyboard fa-3x text-success mb-2"></i>
-                                        <h6>2. Enter Case Details</h6>
-                                        <p class="text-muted small">Provide the case number and filing year</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="text-center mb-3">
-                                        <i class="fas fa-download fa-3x text-info mb-2"></i>
-                                        <h6>3. View & Download</h6>
-                                        <p class="text-muted small">View case details and download available documents</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Sample Cases -->
             <div class="row mt-4">
                 <div class="col-12">
@@ -167,21 +113,21 @@
                             </h5>
                         </div>
                         <div class="card-body">
+                            <p>Use the following examples from our mock data to test the search functionality:</p>
                             <div class="row">
-                                <div class="col-md-6">
-                                    <h6>Criminal Cases:</h6>
-                                    <ul class="list-unstyled">
-                                        <li><code>CRL/123/2024</code> - Criminal Appeal</li>
-                                        <li><code>BAIL/456/2024</code> - Bail Application</li>
-                                    </ul>
-                                </div>
-                                <div class="col-md-6">
-                                    <h6>Civil Cases:</h6>
-                                    <ul class="list-unstyled">
-                                        <li><code>W.P.(C)/789/2024</code> - Writ Petition</li>
-                                        <li><code>FAO/321/2024</code> - First Appeal</li>
-                                    </ul>
-                                </div>
+                                {% if mock_cases %}
+                                    <!-- THIS IS THE FIX: Using loop.index to limit the items -->
+                                    {% for key, case in mock_cases.items() %}
+                                        {% if loop.index <= 8 %}
+                                        <div class="col-md-6 mb-2">
+                                            <code>{{ case.case_type }}/{{ case.case_number.split('/')[0] }}/{{ case.case_number.split('/')[1] }}</code>
+                                            <small class="text-muted">- {{ case.case_title.split(' vs ')[0] }}</small>
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <p>No mock cases available to display.</p>
+                                {% endif %}
                             </div>
                             <div class="alert alert-warning mt-3">
                                 <i class="fas fa-exclamation-triangle me-2"></i>
@@ -205,34 +151,5 @@
             <small class="text-muted">Educational Project - Not affiliated with Delhi High Court</small>
         </div>
     </footer>
-
-    <!-- Loading Modal -->
-    <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-body text-center py-4">
-                    <div class="spinner-border text-primary mb-3" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <h5>Searching Case Details...</h5>
-                    <p class="text-muted mb-0">Please wait while we fetch the information from Delhi High Court</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Show loading modal on form submission
-        document.getElementById('searchForm').addEventListener('submit', function() {
-            const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
-            loadingModal.show();
-        });
-
-        // Form validation
-        document.getElementById('case_number').addEventListener('input', function() {
-            this.value = this.value.replace(/[^0-9]/g, '');
-        });
-    </script>
 </body>
 </html>
