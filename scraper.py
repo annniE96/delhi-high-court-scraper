@@ -2,327 +2,183 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import re
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait, Select
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
-from webdriver_manager.chrome import ChromeDriverManager
-import json
+from urllib.parse import urljoin
 import logging
+import json
+import io
+# New imports for the CAPTCHA solver
+try:
+    from PIL import Image, ImageEnhance, ImageFilter
+    import pytesseract
+    TESSERACT_AVAILABLE = True
+except ImportError:
+    TESSERACT_AVAILABLE = False
+
+
+# Import the centralized mock data for the MockScraper
+from sample_data import MOCK_CASES
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 
 class DelhiHighCourtScraper:
+    """
+    Scraper for fetching live case data from the Delhi High Court website.
+    This class contains the logic to handle real web requests, including CAPTCHA solving.
+    """
     def __init__(self):
         self.base_url = "https://delhihighcourt.nic.in"
-        self.case_status_url = "https://delhihighcourt.nic.in/app/get-case-type-status"
+        self.case_status_url = f"{self.base_url}/dhc_case_status_list_new.php"
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
         })
-        
-        # Setup logging
-        logging.basicConfig(level=logging.INFO)
-        self.logger = logging.getLogger(__name__)
-    
-    def get_webdriver(self):
-        """Initialize and return a Chrome WebDriver"""
-        chrome_options = Options()
-        chrome_options.add_argument('--headless')  # Run in background
-        chrome_options.add_argument('--no-sandbox')
-        chrome_options.add_argument('--disable-dev-shm-usage')
-        chrome_options.add_argument('--window-size=1920,1080')
-        
-        try:
-            driver = webdriver.Chrome(
-                ChromeDriverManager().install(),
-                options=chrome_options
-            )
-            return driver
-        except Exception as e:
-            self.logger.error(f"Failed to initialize WebDriver: {e}")
-            return None
-    
-    def get_case_details(self, case_type, case_number, filing_year):
+        if not TESSERACT_AVAILABLE:
+            logger.warning("Pillow or Pytesseract is not installed. The live scraper's CAPTCHA solver will not work.")
+            logger.warning("Install them with: pip install Pillow pytesseract")
+
+
+    def _solve_captcha(self, captcha_image_url):
         """
-        Main method to get case details from Delhi High Court
-        Returns a dictionary with case information
+        Downloads a CAPTCHA image, processes it, and uses Tesseract OCR to solve it.
         """
+        if not TESSERACT_AVAILABLE:
+            logger.error("Cannot solve CAPTCHA because required libraries are missing.")
+            return None
+
         try:
-            # Try different approaches to get case data
+            # Step 1: Download the CAPTCHA image
+            logger.info(f"Downloading CAPTCHA from: {captcha_image_url}")
+            response = self.session.get(captcha_image_url, stream=True, timeout=10)
+            response.raise_for_status()
             
-            # Approach 1: Direct web scraping with requests
-            case_data = self._scrape_with_requests(case_type, case_number, filing_year)
-            if case_data:
-                return case_data
+            # Step 2: Open the image using Pillow
+            image = Image.open(io.BytesIO(response.content))
+
+            # Step 3: Pre-process the image to make it easier for OCR to read
+            # Convert to grayscale, increase contrast, and apply a threshold
+            image = image.convert('L')  # Grayscale
+            image = ImageEnhance.Contrast(image).enhance(2.0) # Increase contrast
+            # Thresholding: pixels darker than 150 become black, others become white
+            image = image.point(lambda x: 0 if x < 150 else 255, '1')
+
+            # Optional: Save the processed image for debugging
+            # image.save("captcha_processed.png")
+
+            # Step 4: Use Pytesseract to perform OCR on the processed image
+            # We configure it to recognize alphanumeric characters of a specific length
+            custom_config = r'-c tessedit_char_whitelist=0123456789abcdefghijklmnopqrstuvwxyz --psm 7'
+            captcha_text = pytesseract.image_to_string(image, config=custom_config)
             
-            # Approach 2: Use Selenium for JavaScript-heavy sites
-            case_data = self._scrape_with_selenium(case_type, case_number, filing_year)
-            if case_data:
-                return case_data
+            # Clean up the result
+            captcha_text = re.sub(r'[^a-zA-Z0-9]', '', captcha_text).strip()
             
-            # Approach 3: Try alternative URLs or methods
-            case_data = self._try_alternative_methods(case_type, case_number, filing_year)
-            if case_data:
-                return case_data
-            
-            return None
-            
+            logger.info(f"OCR Result: '{captcha_text}'")
+            return captcha_text if len(captcha_text) > 3 else None # Return only if we get a reasonable result
+
         except Exception as e:
-            self.logger.error(f"Error getting case details: {e}")
+            logger.error(f"An error occurred during CAPTCHA solving: {e}")
             return None
-    
-    def _scrape_with_requests(self, case_type, case_number, filing_year):
-        """Try to scrape using requests library"""
+
+    def search_case(self, case_type, case_number, filing_year, **kwargs):
+        """
+        Attempts to fetch real case details from the court website.
+        """
+        logger.info(f"Attempting LIVE scrape for: {case_type}/{case_number}/{filing_year}")
+        
+        # This is a placeholder. You would need to find all the correct codes.
+        case_type_codes = {"W.P.(C)": "28", "CRL.A.": "8"}
+        if case_type not in case_type_codes:
+            return False, {}, f"Live scraper does not have the code for case type: {case_type}"
+
+        # --- CAPTCHA Handling Logic ---
+        # First, we need to visit the page to get the CAPTCHA image URL
         try:
-            # First, get the search page to extract any tokens or form data
-            response = self.session.get(self.case_status_url)
-            if response.status_code != 200:
-                return None
+            initial_response = self.session.get(self.case_status_url, timeout=20)
+            initial_soup = BeautifulSoup(initial_response.text, 'html.parser')
             
-            soup = BeautifulSoup(response.content, 'html.parser')
+            # Find the CAPTCHA image tag
+            captcha_img = initial_soup.find('img', {'id': 'captcha_image'}) # Assuming it has an ID
+            if not captcha_img:
+                return False, {}, "Could not find the CAPTCHA image on the page."
+
+            captcha_url = urljoin(self.base_url, captcha_img['src'])
             
-            # Look for forms and extract necessary data
-            form = soup.find('form')
-            if not form:
-                return None
-            
-            # Prepare form data
-            form_data = {
-                'case_type': case_type,
-                'case_number': case_number,
-                'filing_year': filing_year
-            }
-            
-            # Extract any hidden form fields (CSRF tokens, etc.)
-            hidden_inputs = soup.find_all('input', type='hidden')
-            for inp in hidden_inputs:
-                name = inp.get('name')
-                value = inp.get('value', '')
-                if name:
-                    form_data[name] = value
-            
-            # Submit the form
-            action_url = form.get('action', '')
-            if action_url and not action_url.startswith('http'):
-                action_url = self.base_url + action_url
-            
-            response = self.session.post(action_url or self.case_status_url, data=form_data)
-            
-            if response.status_code == 200:
-                return self._parse_case_response(response.content)
-            
-            return None
-            
-        except Exception as e:
-            self.logger.error(f"Request scraping failed: {e}")
-            return None
-    
-    def _scrape_with_selenium(self, case_type, case_number, filing_year):
-        """Use Selenium for JavaScript-enabled scraping"""
-        driver = self.get_webdriver()
-        if not driver:
-            return None
-        
-        try:
-            # Navigate to the case status page
-            driver.get(self.case_status_url)
-            
-            # Wait for page to load
-            WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.TAG_NAME, "form"))
-            )
-            
-            # Fill in the form
-            try:
-                # Select case type
-                case_type_select = Select(driver.find_element(By.NAME, "case_type"))
-                case_type_select.select_by_value(case_type)
-            except:
-                # If dropdown doesn't exist, try input field
-                case_type_input = driver.find_element(By.NAME, "case_type")
-                case_type_input.clear()
-                case_type_input.send_keys(case_type)
-            
-            # Fill case number
-            case_number_input = driver.find_element(By.NAME, "case_number")
-            case_number_input.clear()
-            case_number_input.send_keys(case_number)
-            
-            # Fill filing year
-            filing_year_input = driver.find_element(By.NAME, "filing_year")
-            filing_year_input.clear()
-            filing_year_input.send_keys(filing_year)
-            
-            # Submit the form
-            submit_button = driver.find_element(By.XPATH, "//input[@type='submit'] | //button[@type='submit']")
-            submit_button.click()
-            
-            # Wait for results
-            WebDriverWait(driver, 15).until(
-                lambda d: d.execute_script("return document.readyState") == "complete"
-            )
-            
-            # Get page source and parse
-            page_source = driver.page_source
-            return self._parse_case_response(page_source)
-            
-        except TimeoutException:
-            self.logger.error("Timeout waiting for page elements")
-            return None
-        except Exception as e:
-            self.logger.error(f"Selenium scraping failed: {e}")
-            return None
-        finally:
-            driver.quit()
-    
-    def _try_alternative_methods(self, case_type, case_number, filing_year):
-        """Try alternative scraping methods or mock data for development"""
-        # For development/testing, return mock data
-        # In production, implement additional scraping strategies
-        
-        self.logger.info("Returning mock data for development")
-        
-        return {
-            'case_number': f"{case_type}/{case_number}/{filing_year}",
-            'case_type': case_type,
-            'filing_year': filing_year,
-            'petitioner_name': 'John Doe',
-            'respondent_name': 'State of Delhi',
-            'filing_date': '15/01/2024',
-            'next_hearing_date': '20/08/2025',
-            'case_status': 'Pending',
-            'judge_name': 'Hon\'ble Justice A.K. Sharma',
-            'court_hall': 'Court Room No. 5',
-            'last_order_date': '10/07/2025',
-            'pdf_links': [
-                {
-                    'title': 'Latest Order',
-                    'date': '10/07/2025',
-                    'url': f'{self.base_url}/orders/sample_order.pdf'
-                }
-            ],
-            'case_history': [
-                {
-                    'date': '10/07/2025',
-                    'description': 'Case listed for hearing',
-                    'order': 'Next hearing on 20/08/2025'
-                },
-                {
-                    'date': '15/06/2025',
-                    'description': 'Application filed',
-                    'order': 'Issue notice to respondent'
-                }
-            ]
+            # Solve the CAPTCHA
+            captcha_solution = self._solve_captcha(captcha_url)
+            if not captcha_solution:
+                return False, {}, "Failed to solve the CAPTCHA."
+
+        except requests.RequestException as e:
+            logger.error(f"Failed to load the initial page: {e}")
+            return False, {}, "Could not connect to the court website to get CAPTCHA."
+
+        # Now, submit the form with the CAPTCHA solution
+        form_data = {
+            'case_type': case_type_codes[case_type],
+            'case_no': case_number,
+            'case_year': filing_year,
+            'captcha': captcha_solution, # Add the solved CAPTCHA
+            'submit': 'Search'
         }
-    
-    def _parse_case_response(self, html_content):
-        """Parse the HTML response to extract case information"""
+
         try:
-            soup = BeautifulSoup(html_content, 'html.parser')
-            
-            case_data = {}
-            
-            # Look for common patterns in court websites
-            # This is a generic parser - adjust based on actual HTML structure
-            
-            # Extract case number
-            case_number_elem = soup.find(['td', 'span', 'div'], string=re.compile(r'Case No|Case Number', re.I))
-            if case_number_elem:
-                case_data['case_number'] = self._extract_text_after_element(case_number_elem)
-            
-            # Extract petitioner name
-            petitioner_elem = soup.find(['td', 'span', 'div'], string=re.compile(r'Petitioner|Appellant', re.I))
-            if petitioner_elem:
-                case_data['petitioner_name'] = self._extract_text_after_element(petitioner_elem)
-            
-            # Extract respondent name
-            respondent_elem = soup.find(['td', 'span', 'div'], string=re.compile(r'Respondent', re.I))
-            if respondent_elem:
-                case_data['respondent_name'] = self._extract_text_after_element(respondent_elem)
-            
-            # Extract dates
-            filing_date_elem = soup.find(['td', 'span', 'div'], string=re.compile(r'Filing Date|Date of Filing', re.I))
-            if filing_date_elem:
-                case_data['filing_date'] = self._extract_text_after_element(filing_date_elem)
-            
-            # Extract next hearing date
-            hearing_elem = soup.find(['td', 'span', 'div'], string=re.compile(r'Next.*Date|Hearing.*Date', re.I))
-            if hearing_elem:
-                case_data['next_hearing_date'] = self._extract_text_after_element(hearing_elem)
-            
-            # Extract PDF links
-            pdf_links = []
-            for link in soup.find_all('a', href=re.compile(r'\.pdf$', re.I)):
-                pdf_url = link.get('href')
-                if not pdf_url.startswith('http'):
-                    pdf_url = self.base_url + pdf_url
-                
-                pdf_links.append({
-                    'title': link.get_text(strip=True) or 'Document',
-                    'url': pdf_url,
-                    'date': self._extract_date_from_text(link.get_text())
-                })
-            
-            case_data['pdf_links'] = pdf_links
-            
-            # If we found any data, return it
-            if case_data:
-                return case_data
-            
-            return None
-            
-        except Exception as e:
-            self.logger.error(f"Failed to parse response: {e}")
-            return None
-    
-    def _extract_text_after_element(self, element):
-        """Extract text that appears after a label element"""
-        try:
-            # Try next sibling
-            next_elem = element.find_next_sibling()
-            if next_elem:
-                return next_elem.get_text(strip=True)
-            
-            # Try parent's next sibling
-            parent = element.parent
-            if parent:
-                next_elem = parent.find_next_sibling()
-                if next_elem:
-                    return next_elem.get_text(strip=True)
-            
-            # Try extracting from same element if it contains ':'
-            text = element.get_text(strip=True)
-            if ':' in text:
-                return text.split(':', 1)[1].strip()
-            
-            return ''
-        except:
-            return ''
-    
-    def _extract_date_from_text(self, text):
-        """Extract date from text using regex"""
-        if not text:
-            return ''
+            response = self.session.post(self.case_status_url, data=form_data, timeout=20)
+            response.raise_for_status()
+
+            if "No Record Found" in response.text or "Invalid Captcha" in response.text:
+                logger.warning("Live scraper: 'No Record Found' or 'Invalid Captcha' message on page.")
+                return False, {}, "Case not found or CAPTCHA was incorrect."
+
+            case_data = self._parse_response(response.text)
+            return True, case_data, ""
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Live scrape failed: {e}")
+            return False, {}, "A network error occurred while contacting the court website."
+
+    def _parse_response(self, html_content):
+        # This remains a placeholder as before
+        soup = BeautifulSoup(html_content, 'html.parser')
+        parsed_data = {
+            'case_title': 'Live Scrape Successful (Example)',
+            'petitioner_name': 'Parsed Petitioner Name',
+            'respondent_name': 'Parsed Respondent Name',
+        }
+        return parsed_data
+
+
+class MockScraper:
+    """
+    Mock scraper that uses a centralized, corrected data source for development.
+    """
+    def __init__(self):
+        self.mock_data = MOCK_CASES
+        logger.info(f"MockScraper initialized with {len(self.mock_data)} cases.")
+
+    def search_case(self, case_type, case_number, filing_year, **kwargs):
+        """
+        Mock search that returns predefined data from the MOCK_CASES dictionary.
+        """
+        time.sleep(0.5)
+        case_key = f"{case_type}.{case_number}.{filing_year}"
         
-        # Common date patterns
-        date_patterns = [
-            r'\d{1,2}[/-]\d{1,2}[/-]\d{4}',
-            r'\d{1,2}[/-]\d{1,2}[/-]\d{2}',
-            r'\d{4}[/-]\d{1,2}[/-]\d{1,2}'
-        ]
-        
-        for pattern in date_patterns:
-            match = re.search(pattern, text)
-            if match:
-                return match.group()
-        
-        return ''
-    
-    def test_connection(self):
-        """Test if the court website is accessible"""
-        try:
-            response = self.session.get(self.base_url, timeout=10)
-            return response.status_code == 200
-        except:
-            return False
+        if case_key in self.mock_data:
+            logger.info(f"Mock scraper: Found case '{case_key}'")
+            return True, self.mock_data[case_key], ""
+        else:
+            logger.warning(f"Mock scraper: Case '{case_key}' not found in mock data.")
+            return False, {}, "Case not found in the mock records. Please try another sample case."
+
+
+def get_scraper(use_mock: bool = False):
+    """
+    Factory function to get the appropriate scraper instance.
+    """
+    if use_mock:
+        logger.info("Using MockScraper for development and testing.")
+        return MockScraper()
+    else:
+        logger.info("Using LIVE DelhiHighCourtScraper.")
+        return DelhiHighCourtScraper()
