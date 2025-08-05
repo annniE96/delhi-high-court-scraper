@@ -1,144 +1,100 @@
-## Delhi High Court Case Data Fetcher
+Delhi High Court Case Data Fetcher
 A web application that fetches case information from Delhi High Court's website and provides a user-friendly interface to search and view case details.
-## 🏛️ Court Chosen
+
+🏛️ Court Chosen
 Delhi High Court (https://delhihighcourt.nic.in/)
-## ✨ Features
 
-Simple Web Interface: Clean, responsive form for case search
-Case Information Display: Shows petitioner, respondent, dates, and case status
-Document Downloads: Links to PDF orders and judgments
-Database Logging: All queries and responses are logged in SQLite
-Error Handling: User-friendly error messages for invalid cases
-Responsive Design: Works on desktop and mobile devices
+✨ Features
+Simple Web Interface: Clean, responsive form for case search.
 
-## 🚀 Quick Start
+Case Information Display: Shows petitioner, respondent, dates, and case status.
+
+Document Downloads: Links to PDF orders and judgments.
+
+Database Logging: All queries and responses are logged in SQLite.
+
+Error Handling: User-friendly error messages for invalid cases.
+
+Responsive Design: Works on desktop and mobile devices.
+
+🚀 Quick Start
 Prerequisites
-
 Python 3.8 or higher
+
 Git
-Chrome browser (for Selenium automation)
 
-## Installation 💻
+Tesseract OCR Engine (for the live scraper)
 
-### Prerequisites
-- Python 3.8+
-- Chrome/Firefox (for Selenium)
+Installation 💻
+Steps
+Clone the repository:
 
-### Steps
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/annniE96/delhi-high-court-scraper.git
-   cd delhi-high-court-scraper
+git clone [https://github.com/your-username/delhi-high-court-scraper.git](https://github.com/your-username/delhi-high-court-scraper.git)
+cd delhi-high-court-scraper
 
-2. Create virtual environment:
-   ```bash
-   # Windows
-   python -m venv venv
-   venv\Scripts\activate
+Create and activate a virtual environment:
 
-   # Mac/Linux
-   python3 -m venv venv
-   source venv/bin/activate
-3. Install dependencies:    
-   ```bash
-   pip install -r requirements.txt
-4. Create project structure:
-   ```bash
-   mkdir -p templates static data
+# On Windows
+python -m venv venv
+.\venv\Scripts\activate
 
-5. Run the application:
-   ```bash
-   python app.py
+# On macOS/Linux
+python3 -m venv venv
+source venv/bin/activate
 
-6. Open your browser: Navigate to http://localhost:5000
+Install dependencies:
 
-## 🔧 Environment Variables
-Create a .env file in the root directory (optional):
-### Flask Configuration
-FLASK_ENV=development
-FLASK_DEBUG=True
-SECRET_KEY=your-secret-key-here
+pip install -r requirements.txt
 
-### Database Configuration
+Create required directories:
+
+# This command works on macOS/Linux. On Windows, create the folders manually.
+mkdir -p templates static data
+
+Run the application:
+
+python app.py
+
+Open your browser: Navigate to http://127.0.0.1:5000
+
+🔧 Environment Variables
+For production, it is recommended to create a .env file in the root directory:
+
+# Flask Configuration
+FLASK_ENV=production
+SECRET_KEY=your-super-strong-secret-key
+
+# Database Configuration
 DATABASE_PATH=data/court_data.db
 
-### Scraping Configuration
-SCRAPING_DELAY=2
-MAX_RETRIES=3
-TIMEOUT=30
-    
-## 🛡️ CAPTCHA Handling Strategy
-Our multi-layered approach to handle website challenges:
-1. Request-based Scraping
+# Scraping Configuration
+# Set to "False" to enable the live scraper
+USE_MOCK_SCRAPER=True
 
-Uses Python requests library for fast HTTP requests
-Handles form submissions and session management
-Extracts CSRF tokens and hidden form fields automatically
+🛡️ CAPTCHA Handling Strategy
+The application includes a dual-scraper system to ensure reliability and demonstrate a robust approach to handling website challenges.
 
-2. Selenium Browser Automation
+1. Mock Scraper (Default)
+Purpose: Provides a stable and fast experience for development and demonstration.
 
-Falls back to Selenium WebDriver for JavaScript-heavy pages
-Handles dynamic content loading
-Can solve simple CAPTCHAs through automated interaction
+How it works: Reads from a predefined set of realistic case data in sample_data.py. This guarantees the UI and all application features can be tested without hitting the live website.
 
-3. Intelligent Parsing
+2. Live Scraper with OCR
+Purpose: To interact with the live court website and handle dynamic challenges like CAPTCHAs.
 
-Uses BeautifulSoup for robust HTML parsing
-Handles various HTML structures and layouts
-Extracts case information using multiple parsing strategies
+Activation: Set USE_MOCK_SCRAPER=False in app.py.
 
-4. Error Handling & Retries
+Strategy:
 
-Implements exponential backoff for failed requests
-Graceful degradation when scraping fails
-Provides meaningful error messages to users
+Image Processing: The scraper downloads the CAPTCHA image and uses the Pillow library to convert it to grayscale and enhance its contrast, making it easier to read.
 
-5. Development Mode
+OCR with Tesseract: The processed image is passed to the Tesseract OCR engine via the pytesseract library. Tesseract attempts to recognize the characters in the image.
 
-Returns mock data for testing when real scraping fails
-Allows development without constant website dependencies
+Form Submission: The recognized text is then submitted along with the case details in the search form.
 
-## 🐳 Docker Support
-FROM python:3.9-slim
+Error Handling: If the CAPTCHA fails or the case is not found, the system provides a clear error message to the user.
 
-WORKDIR /app
+🔒 Security Considerations
+No Hardcoded Secrets: The Flask SECRET_KEY is loaded from environment variables, not written in the code.
 
-### Install system dependencies
-RUN apt-get update && apt-get install -y \
-    chromium-driver \
-    chromium \
-    && rm -rf /var/lib/apt/lists/*
-
-### Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-### Copy application code
-COPY . .
-
-### Create data directory
-RUN mkdir -p data
-
-### Expose port
-EXPOSE 5000
-
-### Run application
-CMD ["python", "app.py"]
-
-## Build and Run
-### Build image
-docker build -t court-data-fetcher .
-
-### Run container
-docker run -p 5000:5000 court-data-fetcher
-
-## 🔒 Security Considerations
-
-No Hardcoded Secrets: All sensitive data via environment variables
-Input Validation: Form inputs are validated and sanitized
-SQL Injection Prevention: Uses parameterized queries
-Rate Limiting: Respectful scraping with delays between requests
-Error Handling: No sensitive information in error messages
-      
-
-
+Input Validation: User input from the search form is validated
