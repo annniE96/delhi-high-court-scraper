@@ -1,84 +1,69 @@
 # Delhi High Court Case Data Fetcher
 
-A web application to fetch case information from the Delhi High Court's website, providing a user-friendly interface to search and view case details.
+A web application that fetches case information from the Delhi High Court's website and provides a user-friendly interface to search and view case details.
+
+This project features a **dual-scraper system**—defaulting to a stable mock data mode for demonstration, while also including a fully implemented live scraper showcasing advanced browser automation and CAPTCHA-solving techniques.
 
 ---
 
 ## 🏛️ Court Chosen
 
 **Delhi High Court**  
-[https://delhihighcourt.nic.in/](https://delhihighcourt.nic.in/)
+Website: [https://delhihighcourt.nic.in/](https://delhihighcourt.nic.in/)
 
 ---
 
 ## ✨ Features
 
-- **Simple Web Interface**: Clean, responsive form for case search.
-- **Case Information Display**: Shows petitioner, respondent, dates, and case status.
-- **Document Downloads**: Generates and allows downloading of a PDF summary for any searched case.
-- **Database Logging**: All search queries and their outcomes are logged in an SQLite database.
-- **Error Handling**: User-friendly error messages for invalid cases or server issues.
-- **Dual Scraper System**: Robust backend can run in a reliable mock mode or a live scraping mode.
+- **Simple Web Interface:** Clean and responsive form for searching cases by type, number, and year.
+- **Case Information Display:** Neatly presents key case details, including petitioner/respondent names, filing dates, and current status.
+- **PDF Generation:** Download a formatted PDF summary of any retrieved case.
+- **Database Logging:** Logs all user search queries and scraper responses to a local SQLite database.
+- **Dual Scraper System:** Switches intelligently between a reliable mock data provider and a live web scraper.
+- **User-Friendly Error Handling:** Clear feedback for invalid searches or when data cannot be fetched.
 
 ---
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### **Prerequisites**
 
 - Python 3.8 or higher
 - Git
-- Tesseract OCR Engine *(required only for live scraper mode)*
+- Tesseract OCR Engine (Required only for live scraper)
 
-### Installation 💻
+### **Installation**
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/your-username/delhi-high-court-scraper.git
-   cd delhi-high-court-scraper
-   ```
+```bash
+git clone https://github.com/your-username/delhi-high-court-scraper.git
+cd delhi-high-court-scraper
 
-2. **Create and activate a virtual environment:**
-   - *On Windows:*
-     ```bash
-     python -m venv venv
-     .\venv\Scripts\activate
-     ```
-   - *On macOS/Linux:*
-     ```bash
-     python3 -m venv venv
-     source venv/bin/activate
-     ```
+# Create and activate a virtual environment
 
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+# On Windows
+python -m venv venv
+.\venv\Scripts\activate
 
-4. **Create required directories:**
-   - *On macOS/Linux:*
-     ```bash
-     mkdir -p data
-     ```
-   - *On Windows:*  
-     Create a folder named `data` manually.
+# On macOS/Linux
+python3 -m venv venv
+source venv/bin/activate
 
-5. **Run the application:**
-   ```bash
-   python app.py
-   ```
+# Install dependencies
+pip install -r requirements.txt
 
-6. **Open your browser:**  
-   Visit [http://127.0.0.1:5000](http://127.0.0.1:5000)
+# Run the application
+python app.py
+```
+
+Open your browser and navigate to: [http://127.0.0.1:5000](http://127.0.0.1:5000)
 
 ---
 
-## 🔧 Environment Variables
+## 🔧 Sample Environment Variables
 
-For best practice, create a `.env` file in the root directory to manage configuration.  
-*(Not required to run, but recommended for production use)*
+While not required to run locally, using a `.env` file is recommended for production:
 
-```
+```env
 # Flask Configuration
 FLASK_ENV=production
 SECRET_KEY=your-super-strong-and-random-secret-key
@@ -92,42 +77,54 @@ USE_MOCK_SCRAPER=True
 
 ## 🛡️ CAPTCHA Handling Strategy
 
-The application includes a dual-scraper system designed for reliability and robust handling of website challenges.
+The application includes a dual-scraper system to ensure reliability and demonstrate a robust approach to live web scraping.
 
-### 1. Mock Scraper (Default Mode)
-- **Purpose:** Provides stability and speed for development and demos.
-- **How it works:** Reads from a predefined set of realistic case data in `sample_data.py`, ensuring the UI and all features are testable without hitting the live website.
+### 1. **Mock Scraper (Default Mode)**
 
-### 2. Live Scraper with OCR (Advanced Mode)
-- **Purpose:** Interacts with the live court website, handling dynamic challenges like CAPTCHAs.
-- **Activation:** Set `USE_MOCK_SCRAPER=False` in `app.py`.
-- **Strategy:**
-  - *Image Processing:* Downloads the CAPTCHA image, converts it to grayscale and enhances contrast using Pillow.
-  - *OCR with Tesseract:* Uses pytesseract to recognize the CAPTCHA text.
-  - *Form Submission:* Submits the recognized text and case details.
-  - *Error Handling:* Provides clear error messages if CAPTCHA fails or case is not found.
+- Uses a curated set of realistic case data in `sample_data.py`.
+- Guarantees a stable, fast, and reliable user experience.
+- Demonstrates core features (UI, database, PDF generation) without unpredictability of the live website.
+
+### 2. **Live Scraper (Advanced Mode)**
+
+- Fully implemented `DelhiHighCourtScraper` interacts with the live court website.
+- Can be activated by setting `USE_MOCK_SCRAPER=False` in `app.py`.
+
+#### **Strategy:**
+
+- **Browser Automation:** Uses Selenium WebDriver to launch a real (headless) Chrome browser, mimicking user interactions.
+- **Image Processing:** Locates the CAPTCHA, takes a screenshot, and uses OpenCV to pre-process the image for clarity.
+- **OCR with Tesseract:** Passes the cleaned image to Tesseract OCR to recognize the CAPTCHA.
+- **Automated Submission & Retries:** Submits recognized text, retries on failure.
+
+#### **Limitations:**
+
+Modern sites like the Delhi High Court use sophisticated anti-bot measures.  
+While the live scraper is technically sound, it may still be blocked.  
+The project defaults to mock mode for reliable demonstration, but the live scraper is included to showcase technical capabilities.
 
 ---
 
 ## 🔒 Security Considerations
 
-- **No Hardcoded Secrets:** The Flask `SECRET_KEY` should be managed securely, preferably via environment variables or a `.env` file.
-- **Sensitive Data:** Do not commit sensitive keys or credentials to your repository.
+- **No Hardcoded Secrets:** Flask `SECRET_KEY` is loaded from environment variables.
+- **Input Validation:** All user input is validated in `app.py`.
+- **SQL Injection Prevention:** `database.py` uses parameterized queries (`?`) to prevent SQL injection.
 
 ---
 
 ## 📄 License
 
-[MIT License](LICENSE)
+[MIT](LICENSE)
 
 ---
 
-## 🤝 Contributing
+## 🙋‍♂️ Contributing
 
-Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
+Pull requests are welcome! For major changes, please open an issue first to discuss your ideas.
 
 ---
 
-## 📫 Contact
+## 📧 Contact
 
-For questions, open an issue or contact [kdb6222@gmail.com](mailto:kdb6222@gmail.com).
+If you have any questions or suggestions, feel free to reach out via [Issues](https://github.com/your-username/delhi-high-court-scraper/issues).
