@@ -15,7 +15,7 @@ except ImportError:
     TESSERACT_AVAILABLE = False
 
 
-# Import the centralized mock data for the MockScraper
+# Import from your renamed sample_data.py file
 from sample_data import MOCK_CASES
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -57,25 +57,18 @@ class DelhiHighCourtScraper:
             image = Image.open(io.BytesIO(response.content))
 
             # Step 3: Pre-process the image to make it easier for OCR to read
-            # Convert to grayscale, increase contrast, and apply a threshold
-            image = image.convert('L')  # Grayscale
-            image = ImageEnhance.Contrast(image).enhance(2.0) # Increase contrast
-            # Thresholding: pixels darker than 150 become black, others become white
+            image = image.convert('L')
+            image = ImageEnhance.Contrast(image).enhance(2.0)
             image = image.point(lambda x: 0 if x < 150 else 255, '1')
 
-            # Optional: Save the processed image for debugging
-            # image.save("captcha_processed.png")
-
             # Step 4: Use Pytesseract to perform OCR on the processed image
-            # We configure it to recognize alphanumeric characters of a specific length
             custom_config = r'-c tessedit_char_whitelist=0123456789abcdefghijklmnopqrstuvwxyz --psm 7'
             captcha_text = pytesseract.image_to_string(image, config=custom_config)
             
-            # Clean up the result
             captcha_text = re.sub(r'[^a-zA-Z0-9]', '', captcha_text).strip()
             
             logger.info(f"OCR Result: '{captcha_text}'")
-            return captcha_text if len(captcha_text) > 3 else None # Return only if we get a reasonable result
+            return captcha_text if len(captcha_text) > 3 else None
 
         except Exception as e:
             logger.error(f"An error occurred during CAPTCHA solving: {e}")
@@ -87,25 +80,20 @@ class DelhiHighCourtScraper:
         """
         logger.info(f"Attempting LIVE scrape for: {case_type}/{case_number}/{filing_year}")
         
-        # This is a placeholder. You would need to find all the correct codes.
         case_type_codes = {"W.P.(C)": "28", "CRL.A.": "8"}
         if case_type not in case_type_codes:
             return False, {}, f"Live scraper does not have the code for case type: {case_type}"
 
-        # --- CAPTCHA Handling Logic ---
-        # First, we need to visit the page to get the CAPTCHA image URL
         try:
             initial_response = self.session.get(self.case_status_url, timeout=20)
             initial_soup = BeautifulSoup(initial_response.text, 'html.parser')
             
-            # Find the CAPTCHA image tag
-            captcha_img = initial_soup.find('img', {'id': 'captcha_image'}) # Assuming it has an ID
+            captcha_img = initial_soup.find('img', {'id': 'captcha_image'})
             if not captcha_img:
                 return False, {}, "Could not find the CAPTCHA image on the page."
 
             captcha_url = urljoin(self.base_url, captcha_img['src'])
             
-            # Solve the CAPTCHA
             captcha_solution = self._solve_captcha(captcha_url)
             if not captcha_solution:
                 return False, {}, "Failed to solve the CAPTCHA."
@@ -114,12 +102,11 @@ class DelhiHighCourtScraper:
             logger.error(f"Failed to load the initial page: {e}")
             return False, {}, "Could not connect to the court website to get CAPTCHA."
 
-        # Now, submit the form with the CAPTCHA solution
         form_data = {
             'case_type': case_type_codes[case_type],
             'case_no': case_number,
             'case_year': filing_year,
-            'captcha': captcha_solution, # Add the solved CAPTCHA
+            'captcha': captcha_solution,
             'submit': 'Search'
         }
 
@@ -139,7 +126,6 @@ class DelhiHighCourtScraper:
             return False, {}, "A network error occurred while contacting the court website."
 
     def _parse_response(self, html_content):
-        # This remains a placeholder as before
         soup = BeautifulSoup(html_content, 'html.parser')
         parsed_data = {
             'case_title': 'Live Scrape Successful (Example)',
@@ -162,7 +148,12 @@ class MockScraper:
         Mock search that returns predefined data from the MOCK_CASES dictionary.
         """
         time.sleep(0.5)
-        case_key = f"{case_type}.{case_number}.{filing_year}"
+        
+        # --- THIS IS THE FIX ---
+        # Remove any trailing dots from the case_type before creating the key.
+        cleaned_case_type = case_type.rstrip('.')
+        
+        case_key = f"{cleaned_case_type}.{case_number}.{filing_year}"
         
         if case_key in self.mock_data:
             logger.info(f"Mock scraper: Found case '{case_key}'")
