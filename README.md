@@ -34,7 +34,7 @@ Delhi High Court (https://delhihighcourt.nic.in/)
 Clone the repository:
 
 ```bash
-git clone https://github.com/your-username/delhi-high-court-scraper.git
+git clone https://github.com/annniE96/delhi-high-court-scraper.git
 cd delhi-high-court-scraper
 ```
 
@@ -131,3 +131,4 @@ Pull requests are welcome! For major changes, please open an issue first to disc
 
 If you have any questions or suggestions, feel free to reach out via [Issues](https://github.com/annniE96/delhi-high-court-scraper/issues)  
 or email: **kdb6222@gmail.com**
+
